@@ -12,9 +12,4 @@
     <PackageReference Include="Aspire.Hosting" Version="8.0.0-preview.3.24105.21" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\Services\Chat\Chat.csproj" />
-    <ProjectReference Include="..\..\Services\People\People.csproj" />
-  </ItemGroup>
-
 </Project>
