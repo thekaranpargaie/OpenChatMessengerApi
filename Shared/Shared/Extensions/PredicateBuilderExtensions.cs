@@ -1,5 +1,5 @@
 ﻿
-using BuildingBlocks.Domain;
+using Base.Domain;
 using System.Linq.Expressions;
 using System.Reflection;
 

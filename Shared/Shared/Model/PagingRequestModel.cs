@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Filters;
+﻿using Base.Filters;
 using System.ComponentModel.DataAnnotations;
 
 namespace Shared.Model
