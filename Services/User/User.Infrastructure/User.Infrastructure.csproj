@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0-preview.3.24105.21" />
     <PackageReference Include="AutoMapper" Version="13.0.1" />
     <PackageReference Include="MediatR" Version="11.0.0" />
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
@@ -21,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Aspire\Aspire.ServiceDefaults\Aspire.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\..\Base\Base\Base.csproj" />
     <ProjectReference Include="..\..\..\Shared\Shared\Shared.csproj" />
     <ProjectReference Include="..\User.Application\User.Application.csproj" />

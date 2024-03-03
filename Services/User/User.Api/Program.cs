@@ -1,10 +1,12 @@
 using Base.Filters;
 using Base.Options;
 using FluentValidation.AspNetCore;
+using MassTransit.Internals;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Shared.Configurations;
 using Shared.Constants;
@@ -25,15 +27,21 @@ var appSetting = InitializeApp(builder.Configuration);
 var app = builder.Build();
 ConfigureApp(app);
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<UserDb>();
-    dbContext.InitDb();
-}
+//using (var scope = host.Services.CreateScope())
+//{
+//    var dbContextOptions = scope.ServiceProvider.GetRequiredService<DbContextOptions<UserDb>>();
+//    dbContextOptions.In
+//    using (var dbContext = dbContextOptions)
+//    {
+//        dbContext.InitDb();
+//    }
+//}
+
 app.Run();
 
 void ConfigureServices(WebApplicationBuilder builder)
 {
+    builder.AddServiceDefaults();
     //Setting up request size
     builder.Services.Configure<KestrelServerOptions>(options =>
     {
@@ -87,7 +95,8 @@ void ConfigureServices(WebApplicationBuilder builder)
     builder.Services.AddVersionSupport(builder.Configuration.GetSection("Version").Get<VersionSettings>());
     builder.Services.RegisterSessionManager();
     builder.Services.AddSingleton<IUserModule, UserModule>();
-    builder.Services.AddDataAccessModule(Environment.GetEnvironmentVariable(CommonEnvVariables.ConnectionString));
+    builder.AddSqlServerDbContext<UserDb>("User");
+    builder.Services.AddDataAccessModule();
     builder.Services.AddMediatorModule(loggingEnabled: true);
     builder.Services.AddServiceModule();
     builder.Services.AddRepositories();    

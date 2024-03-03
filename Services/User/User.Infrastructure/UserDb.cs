@@ -24,6 +24,7 @@ namespace User.Infrastructure
         {
             _sessionManager = sessionManager;
             _log = log;
+            InitDb();
         }
 
         public async Task<int> SaveChangesWithClearAsync(CancellationToken cancellationToken = default)
