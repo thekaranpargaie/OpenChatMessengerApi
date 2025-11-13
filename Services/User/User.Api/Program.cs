@@ -41,7 +41,6 @@ app.Run();
 
 void ConfigureServices(WebApplicationBuilder builder)
 {
-    builder.AddServiceDefaults();
     //Setting up request size
     builder.Services.Configure<KestrelServerOptions>(options =>
     {
@@ -95,7 +94,12 @@ void ConfigureServices(WebApplicationBuilder builder)
     builder.Services.AddVersionSupport(builder.Configuration.GetSection("Version").Get<VersionSettings>());
     builder.Services.RegisterSessionManager();
     builder.Services.AddSingleton<IUserModule, UserModule>();
-    builder.AddNpgsqlDbContext<UserDb>("userdb");
+    
+    // Configure PostgreSQL DbContext
+    var connectionString = builder.Configuration.GetConnectionString("UserDb");
+    builder.Services.AddDbContext<UserDb>(options =>
+        options.UseNpgsql(connectionString));
+    
     builder.Services.AddDataAccessModule();
     builder.Services.AddMediatorModule(loggingEnabled: true);
     builder.Services.AddServiceModule();

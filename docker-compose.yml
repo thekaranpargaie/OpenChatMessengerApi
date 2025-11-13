@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: openchat-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - openchat-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: openchat-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - openchat-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-api:
+    build:
+      context: .
+      dockerfile: Services/User/User.Api/Dockerfile
+    container_name: openchat-user-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__UserDb=Host=postgres;Port=5432;Database=userdb;Username=postgres;Password=postgres
+    ports:
+      - "5001:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - openchat-network
+
+  chat-api:
+    build:
+      context: .
+      dockerfile: Services/Chat/Chat.Api/Dockerfile
+    container_name: openchat-chat-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__ChatDb=Host=postgres;Port=5432;Database=chatdb;Username=postgres;Password=postgres
+    ports:
+      - "5002:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - openchat-network
+
+  presence-api:
+    build:
+      context: .
+      dockerfile: Services/Presence/Presence.Api/Dockerfile
+    container_name: openchat-presence-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    ports:
+      - "5003:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - openchat-network
+
+  webhook-api:
+    build:
+      context: .
+      dockerfile: Services/Webhook/Webhook.Api/Dockerfile
+    container_name: openchat-webhook-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    ports:
+      - "5004:8080"
+    networks:
+      - openchat-network
+
+  archive-api:
+    build:
+      context: .
+      dockerfile: Services/Archive/Archive.Api/Dockerfile
+    container_name: openchat-archive-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    ports:
+      - "5005:8080"
+    networks:
+      - openchat-network
+
+  chat-ui:
+    build:
+      context: .
+      dockerfile: UI/ChatUI/Dockerfile
+    container_name: openchat-chat-ui
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    ports:
+      - "5000:8080"
+    depends_on:
+      - user-api
+      - chat-api
+      - presence-api
+    networks:
+      - openchat-network
+
+networks:
+  openchat-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

@@ -1,5 +1,5 @@
 ﻿using Base.Application;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using System.Data;
 
 namespace User.Infrastructure.Configuration.DataAccess
@@ -18,7 +18,7 @@ namespace User.Infrastructure.Configuration.DataAccess
         {
             if (_connection == null || _connection.State != ConnectionState.Open)
             {
-                _connection = new SqlConnection(_connectionString);
+                _connection = new NpgsqlConnection(_connectionString);
                 _connection.Open();
             }
 
