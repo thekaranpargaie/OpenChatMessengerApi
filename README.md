@@ -1,6 +1,6 @@
 # OpenChatMessengerApi
 
-A modern, scalable, real-time chat platform built with .NET 8 and orchestrated using .NET Aspire.
+A modern, scalable, real-time chat platform built with .NET 8 and Docker Compose.
 
 ## Features
 
@@ -13,7 +13,7 @@ A modern, scalable, real-time chat platform built with .NET 8 and orchestrated u
 - **Webhook Support**: External integrations with HMAC-signed webhooks
 
 ### Technical Architecture
-- **Microservices Architecture**: Modular services orchestrated with .NET Aspire
+- **Microservices Architecture**: Modular services orchestrated with Docker Compose
   - User Service: Authentication, user profiles, and geolocation
   - Chat Service: Messages, channels, and SignalR hubs
   - Presence Service: Online status and typing indicators
@@ -26,7 +26,7 @@ A modern, scalable, real-time chat platform built with .NET 8 and orchestrated u
 ## Technologies Used
 
 - **.NET 8**: Latest .NET framework
-- **.NET Aspire**: Orchestration and observability
+- **Docker Compose**: Container orchestration
 - **SignalR**: Real-time communication
 - **PostgreSQL**: Primary database
 - **Entity Framework Core**: ORM
@@ -37,40 +37,33 @@ A modern, scalable, real-time chat platform built with .NET 8 and orchestrated u
 ## Getting Started
 
 ### Prerequisites
-- .NET 8 SDK
-- Docker (for PostgreSQL via Aspire)
-- .NET Aspire workload
+- Docker Desktop or Docker Engine
+- Docker Compose V2
 
-### Installation
+### Quick Start
 
-1. Install .NET Aspire workload:
-```bash
-dotnet workload install aspire
-```
-
-2. Clone the repository:
+1. Clone the repository:
 ```bash
 git clone https://github.com/thekaranpargaie/OpenChatMessengerApi.git
 cd OpenChatMessengerApi
 ```
 
-3. Run the application:
+2. Build and run all services:
 ```bash
-cd Aspire/Aspire.AppHost
-dotnet run
+docker-compose up --build
 ```
 
-4. Access the Aspire dashboard (usually at http://localhost:15000)
+3. Access the application:
+   - Chat UI: http://localhost:5000
+   - User API Swagger: http://localhost:5001/swagger
+   - Chat API Swagger: http://localhost:5002/swagger
 
-5. Access the Chat UI (check Aspire dashboard for the actual URL)
+For more detailed Docker Compose instructions, see [DOCKER.md](DOCKER.md).
 
 ## Project Structure
 
 ```
 OpenChatMessengerApi/
-├── Aspire/
-│   ├── Aspire.AppHost/          # Orchestration host
-│   └── Aspire.ServiceDefaults/  # Shared configuration
 ├── Services/
 │   ├── User/                     # User management service
 │   ├── Chat/                     # Chat and messaging service
@@ -80,7 +73,9 @@ OpenChatMessengerApi/
 ├── UI/
 │   └── ChatUI/                   # Blazor web interface
 ├── Base/                         # Base infrastructure
-└── Shared/                       # Shared utilities
+├── Shared/                       # Shared utilities
+├── docker-compose.yml            # Docker Compose configuration
+└── docker-compose.dcproj         # Visual Studio Docker integration
 ```
 
 ## API Endpoints
@@ -130,9 +125,10 @@ Messages older than 30 days (configurable) are automatically archived to the fil
 - [x] Message archiving to filesystem
 - [x] Blazor UI
 - [x] IP-based geolocation
+- [x] Docker Compose orchestration
+- [x] Database migrations (User and Chat services)
 - [ ] Nearby users filtering (geolocation-based)
 - [ ] JWT token issuance
-- [ ] Database migrations
 - [ ] Comprehensive tests
 - [ ] Production deployment configuration
 
@@ -148,7 +144,7 @@ See LICENSE.txt for details.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      .NET Aspire AppHost                     │
+│                     Docker Compose Network                   │
 └─────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -156,21 +152,24 @@ See LICENSE.txt for details.
    ┌────▼────┐         ┌──────▼──────┐      ┌──────▼──────┐
    │ ChatUI  │         │  User API   │      │  Chat API   │
    │ (Blazor)│────────▶│  (Auth +    │      │ (Messages + │
-   └─────────┘         │  Profiles)  │      │  SignalR)   │
+   │  :5000  │         │  Profiles)  │      │  SignalR)   │
+   └─────────┘         │   :5001     │      │   :5002     │
                        └──────┬──────┘      └──────┬──────┘
                               │                    │
                         ┌─────▼────────────────────▼─────┐
-                        │       PostgreSQL Database       │
-                        └─────────────────────────────────┘
+                        │    PostgreSQL :5432            │
+                        │  (userdb + chatdb)             │
+                        └────────────────────────────────┘
                               
    ┌─────────────┐      ┌─────────────┐    ┌─────────────┐
    │ Presence    │      │  Webhook    │    │  Archive    │
-   │  Service    │      │   Service   │    │  Service    │
-   └─────────────┘      └─────────────┘    └──────┬──────┘
-                                                   │
-                                            ┌──────▼──────┐
-                                            │ Filesystem  │
-                                            │  (NDJSON)   │
+   │  Service    │◄────▶│   Service   │    │  Service    │
+   │   :5003     │      │    :5004    │    │   :5005     │
+   └──────┬──────┘      └─────────────┘    └──────┬──────┘
+          │                                        │
+   ┌──────▼──────┐                          ┌─────▼───────┐
+   │ Redis :6379 │                          │ Filesystem  │
+   └─────────────┘                          │  (NDJSON)   │
                                             └─────────────┘
 ```
 
@@ -181,13 +180,26 @@ See LICENSE.txt for details.
 dotnet build
 ```
 
-### Running Tests
+### Running with Docker Compose
 ```bash
-dotnet test
+docker-compose up --build
 ```
 
+### Visual Studio
+Open the solution in Visual Studio and set `docker-compose` as the startup project.
+
 ### Database Migrations
-Entity Framework migrations will be added for database schema management.
+Migrations are automatically applied when services start. To create new migrations:
+
+```bash
+# User service
+cd Services/User/User.Infrastructure
+dotnet ef migrations add <MigrationName> --context UserDb
+
+# Chat service
+cd Services/Chat/Chat.Infrastructure
+dotnet ef migrations add <MigrationName> --context ChatDbContext
+```
 
 ## Support
 
