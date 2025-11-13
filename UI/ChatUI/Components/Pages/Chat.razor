@@ -1,118 +1,339 @@
 @page "/chat"
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.SignalR.Client
+@using ChatUI.Services
+@using ChatUI.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
-<PageTitle>Chat</PageTitle>
+<PageTitle>Chat - OpenChatMessenger</PageTitle>
 
-<div class="container-fluid h-100">
-    <div class="row h-100">
-        <!-- Channels Sidebar -->
-        <div class="col-md-3 border-end">
-            <h4 class="p-3">Channels</h4>
-            <div class="list-group">
-                @if (channels != null)
-                {
-                    @foreach (var channel in channels)
-                    {
-                        <button class="list-group-item list-group-item-action @(selectedChannel?.Id == channel.Id ? "active" : "")"
-                                @onclick="() => SelectChannel(channel)">
-                            @channel.Name
-                        </button>
-                    }
-                }
+<div class="chat-layout">
+    <!-- Sidebar -->
+    <div class="chat-sidebar @(mobileSidebarOpen ? "mobile-open" : "")">
+        <!-- User Profile -->
+        @if (AuthService.CurrentUser != null)
+        {
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <span>@GetUserInitials(AuthService.CurrentUser.FirstName, AuthService.CurrentUser.LastName)</span>
+                    <div class="status-dot"></div>
+                </div>
+                <div class="user-info">
+                    <div class="user-name">@AuthService.CurrentUser.FirstName @AuthService.CurrentUser.LastName</div>
+                    <div class="user-status">Active now</div>
+                </div>
+                <button class="icon-btn" @onclick="HandleLogout" title="Logout">
+                    <span>⎋</span>
+                </button>
+            </div>
+        }
+
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <h3>Chats</h3>
+            <div class="header-actions">
+                <button class="icon-btn" @onclick="ToggleTheme" title="Toggle theme">
+                    <span>@(isDarkMode ? "☀️" : "🌙")</span>
+                </button>
             </div>
         </div>
 
-        <!-- Chat Area -->
-        <div class="col-md-9 d-flex flex-column">
-            @if (selectedChannel != null)
+        <!-- Search -->
+        <div class="search-box">
+            <input type="text" placeholder="Search conversations..." @bind="searchQuery" @oninput="FilterChannels" />
+        </div>
+
+        <!-- Channel List -->
+        <div class="channel-list">
+            @if (isLoadingChannels)
             {
-                <div class="p-3 border-bottom">
-                    <h5>@selectedChannel.Name</h5>
+                <div class="loading-container" style="padding: 40px;">
+                    <div class="spinner"></div>
                 </div>
-
-                <!-- Messages -->
-                <div class="flex-grow-1 p-3 overflow-auto" style="max-height: calc(100vh - 200px);">
-                    @foreach (var message in messages)
-                    {
-                        <div class="mb-3">
-                            <strong>User @message.UserId.ToString().Substring(0, 8):</strong>
-                            <span>@message.Content</span>
-                            <small class="text-muted d-block">@message.SentAt.ToString("g")</small>
+            }
+            else if (filteredChannels.Any())
+            {
+                @foreach (var channel in filteredChannels)
+                {
+                    <button class="channel-item @(selectedChannel?.Id == channel.Id ? "active" : "")"
+                            @onclick="() => SelectChannel(channel)">
+                        <div class="channel-avatar">
+                            @GetChannelInitial(channel.Name)
                         </div>
-                    }
-                </div>
-
-                <!-- Input -->
-                <div class="p-3 border-top">
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Type a message..." 
-                               @bind="messageInput" @onkeyup="HandleKeyPress" />
-                        <button class="btn btn-primary" @onclick="SendMessage">Send</button>
-                    </div>
-                </div>
+                        <div class="channel-info">
+                            <div class="channel-name">@channel.Name</div>
+                            <div class="channel-preview">@(channel.Type == "public" ? "Public Channel" : "Private Channel")</div>
+                        </div>
+                        <div class="channel-meta">
+                            <div class="channel-time">@FormatChannelTime(channel.CreatedAt)</div>
+                        </div>
+                    </button>
+                }
             }
             else
             {
-                <div class="d-flex align-items-center justify-content-center h-100">
-                    <p class="text-muted">Select a channel to start chatting</p>
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <div class="empty-state-icon">💬</div>
+                    <h3>No channels found</h3>
+                    <p>Create a new channel to start chatting</p>
                 </div>
             }
         </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="chat-main">
+        @if (selectedChannel != null)
+        {
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <div class="chat-header-avatar">
+                        @GetChannelInitial(selectedChannel.Name)
+                    </div>
+                    <div class="chat-header-text">
+                        <h4>@selectedChannel.Name</h4>
+                        <p>@onlineCount @(onlineCount == 1 ? "member" : "members") • @(selectedChannel.Type == "public" ? "Public" : "Private")</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" title="Channel info">
+                        <span>ℹ️</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <div class="messages-container" id="messagesContainer">
+                @if (isLoadingMessages)
+                {
+                    <div class="loading-container">
+                        <div class="spinner"></div>
+                    </div>
+                }
+                else if (messages.Any())
+                {
+                    @foreach (var message in messages)
+                    {
+                        var isSent = message.UserId == (AuthService.CurrentUser?.Id ?? Guid.Empty);
+                        <div class="message @(isSent ? "sent" : "received")">
+                            <div class="message-avatar">
+                                @GetMessageInitial(message.UserId)
+                            </div>
+                            <div class="message-content">
+                                @if (!isSent)
+                                {
+                                    <div class="message-sender">User @message.UserId.ToString().Substring(0, 8)</div>
+                                }
+                                <div class="message-bubble">
+                                    @message.Content
+                                </div>
+                                <div class="message-time">@FormatMessageTime(message.SentAt)</div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (isTyping)
+                    {
+                        <div class="typing-indicator">
+                            <span>Someone is typing</span>
+                            <div class="typing-dots">
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <h3>No messages yet</h3>
+                        <p>Start the conversation by sending a message</p>
+                    </div>
+                }
+            </div>
+
+            <!-- Message Input -->
+            <div class="message-input-container">
+                <div class="message-input-wrapper">
+                    <textarea class="message-input" 
+                              placeholder="Type a message..." 
+                              @bind="messageInput"
+                              @onkeydown="HandleKeyDown"
+                              @oninput="@(async () => { await HandleTyping(); })"
+                              rows="1"></textarea>
+                    <div class="input-actions">
+                        <button class="send-btn" @onclick="SendMessage" disabled="@(string.IsNullOrWhiteSpace(messageInput))" title="Send message">
+                            <span>➤</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">💭</div>
+                <h3>Welcome to OpenChatMessenger</h3>
+                <p>Select a channel from the sidebar to start chatting</p>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     private HubConnection? hubConnection;
     private List<Channel> channels = new();
+    private List<Channel> filteredChannels = new();
     private Channel? selectedChannel;
     private List<Message> messages = new();
     private string messageInput = "";
-    private string userId = Guid.NewGuid().ToString(); // Temporary user ID
+    private string searchQuery = "";
+    private bool isLoadingChannels = true;
+    private bool isLoadingMessages = false;
+    private bool isDarkMode = false;
+    private bool mobileSidebarOpen = false;
+    private bool isTyping = false;
+    private int onlineCount = 1;
 
     protected override async Task OnInitializedAsync()
     {
+        // Check authentication
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Load theme preference
+        try
+        {
+            isDarkMode = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme") == "dark";
+        }
+        catch { }
+
         await LoadChannels();
         await InitializeSignalR();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Request notification permission
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("notificationManager.init");
+            }
+            catch { }
+        }
+
+        // Auto-scroll to bottom when messages update
+        if (selectedChannel != null && messages.Any())
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("scrollToBottom", "messagesContainer");
+            }
+            catch { }
+        }
+    }
+
     private async Task LoadChannels()
     {
+        isLoadingChannels = true;
+        StateHasChanged();
+
         try
         {
             var client = HttpClientFactory.CreateClient("ChatApi");
             channels = await client.GetFromJsonAsync<List<Channel>>("api/channels") ?? new();
+            filteredChannels = channels;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading channels: {ex.Message}");
         }
+        finally
+        {
+            isLoadingChannels = false;
+            StateHasChanged();
+        }
     }
 
     private async Task InitializeSignalR()
     {
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5001/chathub") // Update with actual URL
-            .Build();
-
-        hubConnection.On<MessageDto>("ReceiveMessage", (message) =>
-        {
-            messages.Add(new Message
-            {
-                Id = message.Id,
-                ChannelId = message.ChannelId,
-                UserId = message.UserId,
-                Content = message.Content,
-                SentAt = message.SentAt
-            });
-            InvokeAsync(StateHasChanged);
-        });
-
         try
         {
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/chathub").ToString().Replace(":5000", ":5002"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On<MessageDto>("ReceiveMessage", async (message) =>
+            {
+                var isSent = message.UserId == (AuthService.CurrentUser?.Id ?? Guid.Empty);
+                
+                messages.Add(new Message
+                {
+                    Id = message.Id,
+                    ChannelId = message.ChannelId,
+                    UserId = message.UserId,
+                    Content = message.Content,
+                    SentAt = message.SentAt
+                });
+                
+                // Play sound effect
+                try
+                {
+                    if (isSent)
+                    {
+                        await JSRuntime.InvokeVoidAsync("audioManager.playMessageSent");
+                    }
+                    else
+                    {
+                        await JSRuntime.InvokeVoidAsync("audioManager.playMessageReceived");
+                        await JSRuntime.InvokeVoidAsync("notificationManager.showMessage", 
+                            $"User {message.UserId.ToString().Substring(0, 8)}", 
+                            message.Content);
+                    }
+                }
+                catch { }
+                
+                await InvokeAsync(StateHasChanged);
+            });
+
+            hubConnection.On<string>("UserTyping", (userId) =>
+            {
+                isTyping = true;
+                StateHasChanged();
+                
+                // Reset typing indicator after 3 seconds
+                Task.Delay(3000).ContinueWith(_ =>
+                {
+                    isTyping = false;
+                    InvokeAsync(StateHasChanged);
+                });
+            });
+
+            hubConnection.Reconnecting += error =>
+            {
+                Console.WriteLine($"SignalR reconnecting: {error?.Message}");
+                return Task.CompletedTask;
+            };
+
+            hubConnection.Reconnected += connectionId =>
+            {
+                Console.WriteLine($"SignalR reconnected: {connectionId}");
+                return Task.CompletedTask;
+            };
+
             await hubConnection.StartAsync();
         }
         catch (Exception ex)
@@ -123,18 +344,46 @@
 
     private async Task SelectChannel(Channel channel)
     {
+        if (selectedChannel?.Id == channel.Id) return;
+
+        // Leave previous channel
+        if (selectedChannel != null && hubConnection?.State == HubConnectionState.Connected)
+        {
+            try
+            {
+                await hubConnection.SendAsync("LeaveChannel", selectedChannel.Id.ToString());
+            }
+            catch { }
+        }
+
         selectedChannel = channel;
+        messages.Clear();
         await LoadMessages();
 
+        // Join new channel
         if (hubConnection?.State == HubConnectionState.Connected)
         {
-            await hubConnection.SendAsync("JoinChannel", channel.Id.ToString());
+            try
+            {
+                await hubConnection.SendAsync("JoinChannel", channel.Id.ToString());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error joining channel: {ex.Message}");
+            }
         }
+
+        // Close mobile sidebar after selection
+        mobileSidebarOpen = false;
+        StateHasChanged();
     }
 
     private async Task LoadMessages()
     {
         if (selectedChannel == null) return;
+
+        isLoadingMessages = true;
+        StateHasChanged();
 
         try
         {
@@ -145,6 +394,11 @@
         {
             Console.WriteLine($"Error loading messages: {ex.Message}");
         }
+        finally
+        {
+            isLoadingMessages = false;
+            StateHasChanged();
+        }
     }
 
     private async Task SendMessage()
@@ -152,30 +406,135 @@
         if (string.IsNullOrWhiteSpace(messageInput) || selectedChannel == null || hubConnection == null)
             return;
 
+        if (AuthService.CurrentUser == null)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
         try
         {
-            await hubConnection.SendAsync("SendMessage", selectedChannel.Id.ToString(), userId, messageInput);
+            var content = messageInput.Trim();
             messageInput = "";
+            StateHasChanged();
+
+            await hubConnection.SendAsync("SendMessage", 
+                selectedChannel.Id.ToString(), 
+                AuthService.CurrentUser.Id.ToString(), 
+                content);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error sending message: {ex.Message}");
+            // Message is already in messageInput, no need to restore
         }
     }
 
-    private async Task HandleKeyPress(KeyboardEventArgs e)
+    private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && !e.ShiftKey)
         {
             await SendMessage();
         }
+    }
+
+    private async Task HandleTyping()
+    {
+        if (selectedChannel == null || hubConnection?.State != HubConnectionState.Connected) return;
+
+        try
+        {
+            var userId = AuthService.CurrentUser?.Id.ToString() ?? Guid.NewGuid().ToString();
+            await hubConnection.SendAsync("Typing", selectedChannel.Id.ToString(), userId);
+        }
+        catch { }
+    }
+
+    private void FilterChannels()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredChannels = channels;
+        }
+        else
+        {
+            filteredChannels = channels
+                .Where(c => c.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        try
+        {
+            var newTheme = await JSRuntime.InvokeAsync<string>("themeManager.toggleTheme");
+            isDarkMode = newTheme == "dark";
+        }
+        catch { }
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+
+    private string GetUserInitials(string firstName, string lastName)
+    {
+        var first = !string.IsNullOrEmpty(firstName) ? firstName[0].ToString() : "";
+        var last = !string.IsNullOrEmpty(lastName) ? lastName[0].ToString() : "";
+        return (first + last).ToUpper();
+    }
+
+    private string GetChannelInitial(string name)
+    {
+        return !string.IsNullOrEmpty(name) ? name[0].ToString().ToUpper() : "C";
+    }
+
+    private string GetMessageInitial(Guid userId)
+    {
+        return userId.ToString()[0].ToString().ToUpper();
+    }
+
+    private string FormatChannelTime(DateTime dateTime)
+    {
+        var now = DateTime.UtcNow;
+        var diff = now - dateTime;
+
+        if (diff.TotalMinutes < 1) return "Just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d";
+        
+        return dateTime.ToString("MMM dd");
+    }
+
+    private string FormatMessageTime(DateTime dateTime)
+    {
+        var now = DateTime.UtcNow;
+        var diff = now - dateTime;
+
+        if (diff.TotalMinutes < 1) return "Just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalDays < 1) return dateTime.ToString("h:mm tt");
+        
+        return dateTime.ToString("MMM dd, h:mm tt");
     }
 
     public async ValueTask DisposeAsync()
     {
         if (hubConnection != null)
         {
-            await hubConnection.DisposeAsync();
+            try
+            {
+                if (selectedChannel != null && hubConnection.State == HubConnectionState.Connected)
+                {
+                    await hubConnection.SendAsync("LeaveChannel", selectedChannel.Id.ToString());
+                }
+                await hubConnection.DisposeAsync();
+            }
+            catch { }
         }
     }
 
@@ -184,6 +543,7 @@
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
         public string Type { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
     }
 
     private class Message

@@ -1,10 +1,24 @@
 # OpenChatMessengerApi
 
-A modern, scalable, real-time chat platform built with .NET 8 and Docker Compose.
+A modern, scalable, real-time chat platform built with .NET 8 and Docker Compose, featuring a beautiful Messenger-style UI.
 
-## Features
+## ✨ Features
 
-### Core Functionality
+### 🎨 Modern Chat UI *(NEW!)*
+- **Facebook Messenger-Style Interface**: Clean, modern design with smooth animations
+- **Dark/Light Themes**: Toggle between themes with persistent preference
+- **Responsive Design**: Seamless experience on desktop, tablet, and mobile
+- **Real-Time Updates**: Instant message delivery with typing indicators
+- **Audio Notifications**: Pleasant sound effects for send/receive events
+- **Browser Notifications**: Get notified even when tab is inactive
+
+### 🔐 Authentication & Security *(NEW!)*
+- **JWT-Based Authentication**: Secure token-based auth system
+- **Session Persistence**: Stay logged in across browser sessions
+- **Secure Storage**: Tokens stored safely in localStorage
+- **User Profiles**: Avatar, status, and profile information
+
+### 💬 Core Functionality
 - **Real-Time Messaging**: Instant message delivery using SignalR
 - **World Chat**: Global public channel for all users
 - **Nearby Users**: Discover and chat with users in your geographic area (IP-based geolocation)
@@ -23,18 +37,21 @@ A modern, scalable, real-time chat platform built with .NET 8 and Docker Compose
 - **File Storage**: Compressed NDJSON (.ndjson.gz) for archived messages
 - **UI**: Blazor Server for interactive web interface
 
-## Technologies Used
+## 🛠️ Technologies Used
 
 - **.NET 8**: Latest .NET framework
+- **Blazor Server**: Interactive server-side UI framework
+- **SignalR**: Real-time bidirectional communication
 - **Docker Compose**: Container orchestration
-- **SignalR**: Real-time communication
-- **PostgreSQL**: Primary database
+- **PostgreSQL**: Relational database
 - **Entity Framework Core**: ORM
-- **Blazor Server**: Interactive UI
-- **JWT**: Authentication tokens
+- **JWT**: Secure authentication tokens
+- **CSS Custom Properties**: Dynamic theming system
+- **Web Audio API**: Programmatic sound generation
+- **Notifications API**: Browser push notifications
 - **IP Geolocation**: Free IP-API service
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 - Docker Desktop or Docker Engine
@@ -123,14 +140,38 @@ Messages older than 30 days (configurable) are automatically archived to the fil
 - [x] Presence tracking
 - [x] Webhook system with HMAC signing
 - [x] Message archiving to filesystem
-- [x] Blazor UI
+- [x] Modern Messenger-style UI *(NEW!)*
+- [x] Dark/Light theme toggle *(NEW!)*
+- [x] Audio & Browser notifications *(NEW!)*
+- [x] Responsive mobile design *(NEW!)*
+- [x] Typing indicators *(NEW!)*
 - [x] IP-based geolocation
 - [x] Docker Compose orchestration
 - [x] Database migrations (User and Chat services)
 - [ ] Nearby users filtering (geolocation-based)
-- [ ] JWT token issuance
+- [ ] Direct messaging (1:1 chats)
+- [ ] Private channels with invites
+- [ ] Read receipts
+- [ ] JWT token issuance (in progress)
 - [ ] Comprehensive tests
 - [ ] Production deployment configuration
+
+## 📖 Documentation
+
+For detailed information about the new Chat UI features, customization options, and troubleshooting, see:
+
+**[UI_GUIDE.md](UI_GUIDE.md)** - Complete guide to the modern chat interface
+
+Topics covered:
+- Feature overview
+- Getting started guide
+- UI component details
+- Keyboard shortcuts
+- Theme customization
+- Audio notification configuration
+- Mobile experience
+- Troubleshooting
+- Future enhancements
 
 ## Contributing
 
