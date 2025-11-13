@@ -1,0 +1,206 @@
+@page "/chat"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>Chat</PageTitle>
+
+<div class="container-fluid h-100">
+    <div class="row h-100">
+        <!-- Channels Sidebar -->
+        <div class="col-md-3 border-end">
+            <h4 class="p-3">Channels</h4>
+            <div class="list-group">
+                @if (channels != null)
+                {
+                    @foreach (var channel in channels)
+                    {
+                        <button class="list-group-item list-group-item-action @(selectedChannel?.Id == channel.Id ? "active" : "")"
+                                @onclick="() => SelectChannel(channel)">
+                            @channel.Name
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="col-md-9 d-flex flex-column">
+            @if (selectedChannel != null)
+            {
+                <div class="p-3 border-bottom">
+                    <h5>@selectedChannel.Name</h5>
+                </div>
+
+                <!-- Messages -->
+                <div class="flex-grow-1 p-3 overflow-auto" style="max-height: calc(100vh - 200px);">
+                    @foreach (var message in messages)
+                    {
+                        <div class="mb-3">
+                            <strong>User @message.UserId.ToString().Substring(0, 8):</strong>
+                            <span>@message.Content</span>
+                            <small class="text-muted d-block">@message.SentAt.ToString("g")</small>
+                        </div>
+                    }
+                </div>
+
+                <!-- Input -->
+                <div class="p-3 border-top">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Type a message..." 
+                               @bind="messageInput" @onkeyup="HandleKeyPress" />
+                        <button class="btn btn-primary" @onclick="SendMessage">Send</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex align-items-center justify-content-center h-100">
+                    <p class="text-muted">Select a channel to start chatting</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private HubConnection? hubConnection;
+    private List<Channel> channels = new();
+    private Channel? selectedChannel;
+    private List<Message> messages = new();
+    private string messageInput = "";
+    private string userId = Guid.NewGuid().ToString(); // Temporary user ID
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChannels();
+        await InitializeSignalR();
+    }
+
+    private async Task LoadChannels()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ChatApi");
+            channels = await client.GetFromJsonAsync<List<Channel>>("api/channels") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading channels: {ex.Message}");
+        }
+    }
+
+    private async Task InitializeSignalR()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5001/chathub") // Update with actual URL
+            .Build();
+
+        hubConnection.On<MessageDto>("ReceiveMessage", (message) =>
+        {
+            messages.Add(new Message
+            {
+                Id = message.Id,
+                ChannelId = message.ChannelId,
+                UserId = message.UserId,
+                Content = message.Content,
+                SentAt = message.SentAt
+            });
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to SignalR: {ex.Message}");
+        }
+    }
+
+    private async Task SelectChannel(Channel channel)
+    {
+        selectedChannel = channel;
+        await LoadMessages();
+
+        if (hubConnection?.State == HubConnectionState.Connected)
+        {
+            await hubConnection.SendAsync("JoinChannel", channel.Id.ToString());
+        }
+    }
+
+    private async Task LoadMessages()
+    {
+        if (selectedChannel == null) return;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ChatApi");
+            messages = await client.GetFromJsonAsync<List<Message>>($"api/messages/channel/{selectedChannel.Id}") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading messages: {ex.Message}");
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(messageInput) || selectedChannel == null || hubConnection == null)
+            return;
+
+        try
+        {
+            await hubConnection.SendAsync("SendMessage", selectedChannel.Id.ToString(), userId, messageInput);
+            messageInput = "";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending message: {ex.Message}");
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    private class Channel
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = "";
+    }
+
+    private class Message
+    {
+        public Guid Id { get; set; }
+        public Guid ChannelId { get; set; }
+        public Guid UserId { get; set; }
+        public string Content { get; set; } = "";
+        public DateTime SentAt { get; set; }
+    }
+
+    private class MessageDto
+    {
+        public Guid Id { get; set; }
+        public Guid ChannelId { get; set; }
+        public Guid UserId { get; set; }
+        public string Content { get; set; } = "";
+        public DateTime SentAt { get; set; }
+    }
+}

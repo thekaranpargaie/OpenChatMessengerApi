@@ -95,7 +95,7 @@ void ConfigureServices(WebApplicationBuilder builder)
     builder.Services.AddVersionSupport(builder.Configuration.GetSection("Version").Get<VersionSettings>());
     builder.Services.RegisterSessionManager();
     builder.Services.AddSingleton<IUserModule, UserModule>();
-    builder.AddSqlServerDbContext<UserDb>("User");
+    builder.AddNpgsqlDbContext<UserDb>("userdb");
     builder.Services.AddDataAccessModule();
     builder.Services.AddMediatorModule(loggingEnabled: true);
     builder.Services.AddServiceModule();

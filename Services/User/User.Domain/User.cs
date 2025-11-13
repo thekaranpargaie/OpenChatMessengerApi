@@ -20,6 +20,11 @@ namespace User.Domain
         public string ContactEmail { get; set; }
         public string Image { get; set; }
         public UserStatus Status { get; set; }
+        public string? City { get; set; }
+        public string? Country { get; set; }
+        public string? IpAddress { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
         #endregion
         #region Constructors
         public User()
@@ -53,6 +58,14 @@ namespace User.Domain
             LastName = lastName;
             ContactEmail = email;
             Image = image;
+        }
+        public void UpdateLocation(string? city, string? country, string? ipAddress, double? latitude, double? longitude)
+        {
+            City = city;
+            Country = country;
+            IpAddress = ipAddress;
+            Latitude = latitude;
+            Longitude = longitude;
         }
         public void Delete()
         {
