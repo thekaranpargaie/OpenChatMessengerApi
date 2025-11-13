@@ -3,8 +3,6 @@ using Presence.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
-
 builder.Services.AddSingleton<PresenceService>();
 builder.Services.AddSignalR();
 
@@ -23,8 +21,6 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-
-app.MapDefaultEndpoints();
 
 if (app.Environment.IsDevelopment())
 {

@@ -20,11 +20,14 @@ namespace User.Infrastructure
         }
         readonly SessionManager _sessionManager;
         readonly IDebugLogger _log;
-        public UserDb(DbContextOptions<UserDb> options, SessionManager sessionManager, IDebugLogger log) : base(options)
+        public UserDb(DbContextOptions<UserDb> options, SessionManager sessionManager, IDebugLogger log, bool initializeDatabase = true) : base(options)
         {
             _sessionManager = sessionManager;
             _log = log;
-            InitDb();
+            if (initializeDatabase)
+            {
+                InitDb();
+            }
         }
 
         public async Task<int> SaveChangesWithClearAsync(CancellationToken cancellationToken = default)

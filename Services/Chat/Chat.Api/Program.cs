@@ -1,12 +1,13 @@
 using Chat.Api.Hubs;
 using Chat.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
-
 // Add services to the container.
-builder.AddNpgsqlDbContext<ChatDbContext>("chatdb");
+var connectionString = builder.Configuration.GetConnectionString("ChatDb");
+builder.Services.AddDbContext<ChatDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -28,8 +29,6 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-
-app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

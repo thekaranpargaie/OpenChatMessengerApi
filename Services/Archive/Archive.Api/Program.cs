@@ -2,8 +2,6 @@ using Archive.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
-
 builder.Services.AddSingleton<ArchiveService>();
 
 builder.Services.AddControllers();
@@ -21,8 +19,6 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-
-app.MapDefaultEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
