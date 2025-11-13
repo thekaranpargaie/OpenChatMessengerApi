@@ -1,4 +1,5 @@
 using ChatUI.Components;
+using ChatUI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,9 @@ builder.Services.AddHttpClient("PresenceApi", client =>
 {
     client.BaseAddress = new Uri("http://presence-api:8080");
 });
+
+// Add AuthService as scoped
+builder.Services.AddScoped<AuthService>();
 
 var app = builder.Build();
 

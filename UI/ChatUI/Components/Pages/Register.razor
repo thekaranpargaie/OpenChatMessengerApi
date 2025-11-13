@@ -1,0 +1,100 @@
+@page "/register"
+@using ChatUI.Models
+@using ChatUI.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Register - OpenChatMessenger</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Create Account</h2>
+            <p>Join OpenChatMessenger today</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @errorMessage
+            </div>
+        }
+
+        <EditForm Model="@registerRequest" OnValidSubmit="HandleRegister" class="auth-form">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="firstName">First Name</label>
+                    <InputText id="firstName" @bind-Value="registerRequest.FirstName" class="form-control" placeholder="First name" />
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="lastName">Last Name</label>
+                    <InputText id="lastName" @bind-Value="registerRequest.LastName" class="form-control" placeholder="Last name" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <InputText id="email" @bind-Value="registerRequest.Email" class="form-control" placeholder="Enter your email" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <InputText id="password" type="password" @bind-Value="registerRequest.Password" class="form-control" placeholder="Create a password" />
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <InputText id="confirmPassword" type="password" @bind-Value="registerRequest.ConfirmPassword" class="form-control" placeholder="Confirm your password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span> Creating account...</span>
+                }
+                else
+                {
+                    <span>Sign Up</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="/login">Sign In</a></p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest registerRequest = new();
+    private string errorMessage = "";
+    private bool isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        // Validate passwords match
+        if (registerRequest.Password != registerRequest.ConfirmPassword)
+        {
+            errorMessage = "Passwords do not match";
+            isLoading = false;
+            return;
+        }
+
+        var (success, message) = await AuthService.RegisterAsync(registerRequest);
+
+        isLoading = false;
+
+        if (success)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            errorMessage = message;
+        }
+    }
+}

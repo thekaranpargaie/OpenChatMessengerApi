@@ -1,39 +1,69 @@
 ﻿@page "/"
+@using ChatUI.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
 
 <PageTitle>OpenChatMessenger</PageTitle>
 
-<div class="text-center mt-5">
-    <h1 class="display-4">Welcome to OpenChatMessenger</h1>
-    <p class="lead">A modern, real-time chat platform built with .NET Aspire</p>
-    
-    <div class="mt-5">
-        <a href="/chat" class="btn btn-primary btn-lg">Start Chatting</a>
-    </div>
+<div class="auth-container">
+    <div class="auth-card" style="max-width: 600px;">
+        <div class="auth-header">
+            <h2>💬 OpenChatMessenger</h2>
+            <p>A modern, real-time chat platform for seamless communication</p>
+        </div>
 
-    <div class="row mt-5">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Real-Time Messaging</h5>
-                    <p class="card-text">Instant message delivery with SignalR technology</p>
-                </div>
+        @if (AuthService.IsAuthenticated)
+        {
+            <div class="text-center">
+                <p style="margin-bottom: 20px;">Welcome back, @AuthService.CurrentUser?.FirstName!</p>
+                <a href="/chat" class="btn btn-primary btn-block">Continue to Chat</a>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">World Chat</h5>
-                    <p class="card-text">Connect with users globally in public channels</p>
-                </div>
+        }
+        else
+        {
+            <div style="display: flex; gap: 12px; margin-top: 30px;">
+                <a href="/login" class="btn btn-primary" style="flex: 1; text-align: center; text-decoration: none;">Sign In</a>
+                <a href="/register" class="btn btn-primary" style="flex: 1; text-align: center; text-decoration: none; background-color: var(--secondary-color);">Sign Up</a>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Nearby Users</h5>
-                    <p class="card-text">Discover and chat with people in your area</p>
+        }
+
+        <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid var(--border-color);">
+            <h3 style="text-align: center; margin-bottom: 24px; font-size: 18px; color: var(--text-primary);">Features</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="text-align: center; padding: 16px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">⚡</div>
+                    <h5 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Real-Time</h5>
+                    <p style="font-size: 12px; color: var(--text-secondary);">Instant messaging with SignalR</p>
+                </div>
+                <div style="text-align: center; padding: 16px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">🌍</div>
+                    <h5 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Global Channels</h5>
+                    <p style="font-size: 12px; color: var(--text-secondary);">Connect with users worldwide</p>
+                </div>
+                <div style="text-align: center; padding: 16px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
+                    <h5 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Secure</h5>
+                    <p style="font-size: 12px; color: var(--text-secondary);">JWT-based authentication</p>
+                </div>
+                <div style="text-align: center; padding: 16px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">🎨</div>
+                    <h5 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Modern UI</h5>
+                    <p style="font-size: 12px; color: var(--text-secondary);">Beautiful dark/light themes</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is already logged in
+        if (await AuthService.CheckAuthStateAsync())
+        {
+            // User is authenticated, could redirect to chat
+            // Navigation.NavigateTo("/chat");
+        }
+    }
+}
+
