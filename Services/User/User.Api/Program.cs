@@ -27,16 +27,6 @@ var appSetting = InitializeApp(builder.Configuration);
 var app = builder.Build();
 ConfigureApp(app);
 
-//using (var scope = host.Services.CreateScope())
-//{
-//    var dbContextOptions = scope.ServiceProvider.GetRequiredService<DbContextOptions<UserDb>>();
-//    dbContextOptions.In
-//    using (var dbContext = dbContextOptions)
-//    {
-//        dbContext.InitDb();
-//    }
-//}
-
 app.Run();
 
 void ConfigureServices(WebApplicationBuilder builder)
@@ -110,13 +100,12 @@ AppSettings InitializeApp(IConfiguration configuration)
 {
     IConfigurationSection appSettings = configuration.GetSection("AppSettings");
     var appSetting = appSettings.Get<AppSettings>();
-    // Register service to discovery
-    builder.Services.RegisterService(appSetting.ServiceConfig);
+    
+    // Consul service discovery is disabled for Docker Compose
+    // Docker Compose provides DNS-based service discovery automatically
+    // Services can communicate using service names defined in docker-compose.yml
+    // builder.Services.RegisterService(appSetting.ServiceConfig);
 
-    //appSetting.RabitMQConfiguration.UserName = Environment.GetEnvironmentVariable(CommonEnvVariables.RabbitMQUserName) ?? string.Empty;
-    //appSetting.RabitMQConfiguration.Password = Environment.GetEnvironmentVariable(CommonEnvVariables.RabbitMQPassword) ?? string.Empty;
-    //appSetting.RabitMQConfiguration.HostName = Environment.GetEnvironmentVariable(CommonEnvVariables.RabbitMQHost) ?? string.Empty;
-    //appSetting.RabitMQConfiguration.Port = Convert.ToUInt16(Environment.GetEnvironmentVariable(CommonEnvVariables.RabbitMQPort));
     return appSetting;
 }
 void ConfigSwagger(IServiceCollection serviceCollection)

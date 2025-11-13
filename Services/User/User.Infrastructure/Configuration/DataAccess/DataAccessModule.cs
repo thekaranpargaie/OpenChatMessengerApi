@@ -8,10 +8,8 @@ namespace User.Infrastructure.Configuration.DataAccess
     {
         public static void AddDataAccessModule(this IServiceCollection services)
         {
-            //services.AddSqlServerDbContext<UserDb>("User");
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddScoped(typeof(IEntityRepository<>), typeof(EntityRepository<>));
-
         }
     }
 }

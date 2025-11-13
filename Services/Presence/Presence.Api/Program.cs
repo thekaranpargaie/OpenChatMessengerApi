@@ -9,11 +9,16 @@ builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Add CORS - Allow Docker Compose service names and localhost
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5000", "https://localhost:5001")
+        policy.WithOrigins(
+                "http://localhost:5000", 
+                "https://localhost:5001",
+                "http://openchat-chat-ui:8080",
+                "http://chat-ui:8080")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

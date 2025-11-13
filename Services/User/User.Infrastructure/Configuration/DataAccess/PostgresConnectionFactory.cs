@@ -1,15 +1,15 @@
-﻿using Base.Application;
+using Base.Application;
 using Npgsql;
 using System.Data;
 
 namespace User.Infrastructure.Configuration.DataAccess
 {
-    public class SqlServerConnectionFactory : ISqlConnectionFactory, IDisposable
+    public class PostgresConnectionFactory : ISqlConnectionFactory, IDisposable
     {
         private readonly string _connectionString;
         private IDbConnection _connection;
 
-        public SqlServerConnectionFactory(string connectionString)
+        public PostgresConnectionFactory(string connectionString)
         {
             _connectionString = connectionString;
         }
@@ -24,6 +24,7 @@ namespace User.Infrastructure.Configuration.DataAccess
 
             return _connection;
         }
+        
         public void Dispose()
         {
             Dispose(true);
@@ -43,7 +44,6 @@ namespace User.Infrastructure.Configuration.DataAccess
                     _connection.Dispose();
                 }
             }
-
         }
     }
 }
